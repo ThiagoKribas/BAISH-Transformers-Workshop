@@ -8,10 +8,7 @@ class CountBasedBigram:
     """
     def __init__(self, vocab_size):
         self.vocab_size = vocab_size
-        # TODO: Create a (vocab_size, vocab_size) tensor to store counts
-        # Hint: Use torch.zeros
-        # counts[i, j] = how many times token i is followed by token j
-        self.counts = None
+        self.counts = torch.ones([vocab_size, vocab_size])
     
     def train(self, data):
         """
@@ -19,26 +16,22 @@ class CountBasedBigram:
         Args:
             data: torch.LongTensor of token indices
         """
-        # TODO: Iterate through consecutive pairs in data
-        # For each pair (current_token, next_token):
-        #   Increment counts[current_token, next_token]
-        # Hint: Use data[:-1] for current tokens, data[1:] for next tokens
-        # Hint: You can use a for loop with zip, or vectorized operations
         
-        pass
-    
+        tuple_tensor = torch.tensor(list(zip(data[:-1], data[1:])))
+        print(self.counts)
+        #self.counts[tuple_tensor[:, 0], tuple_tensor[:, 1]] += 1
+        for (current, next) in tuple_tensor:
+            self.counts[current, next] += 1
+        print(self.counts)
     def get_probabilities(self):
         """
         Convert counts to probabilities.
         Returns: (vocab_size, vocab_size) tensor where [i, j] = P(j | i)
         """
-        # TODO: Normalize counts by row sums to get probabilities
-        # P(next | current) = count(current, next) / sum(count(current, *))
-        # Hint: Use self.counts.sum(dim=1, keepdim=True) to get row sums
-        # Hint: Add small epsilon to avoid division by zero
         
-        pass
-    
+        amount_of_current = self.counts.sum(dim=1, keepdim=True)
+        return self.counts / amount_of_current
+
     def generate(self, idx, max_new_tokens):
         """
         Generate tokens by sampling from the count-based distribution.
@@ -49,21 +42,13 @@ class CountBasedBigram:
         probs = self.get_probabilities()
         
         for _ in range(max_new_tokens):
-            # TODO: Get the last token in the sequence
-            # Hint: Use idx[:, -1]
-            current_token = None
+            current_token = idx[:, -1]
+
+            next_probs = probs[current_token]
             
-            # TODO: Get probability distribution for next token
-            # Hint: Use probs[current_token] to get the row(s)
-            next_probs = None
+            idx_next = torch.multinomial(next_probs, num_samples=1)
             
-            # TODO: Sample from the distribution
-            # Hint: Use torch.multinomial(next_probs, num_samples=1)
-            idx_next = None
-            
-            # TODO: Append to sequence
-            # Hint: Use torch.cat((idx, idx_next), dim=1)
-            idx = None
+            idx = torch.cat((idx, idx_next), dim=1)
         
         return idx
     
@@ -73,59 +58,57 @@ class CountBasedBigram:
         Same metric as neural models!
         """
         probs = self.get_probabilities()
+        current_tokens = data[:-1]
+        next_tokens = data[1:]
         
-        # TODO: Get current and next tokens
-        current_tokens = None  # data[:-1]
-        next_tokens = None     # data[1:]
+        token_probs = probs[current_tokens, next_tokens]
         
-        # TODO: Get probabilities for the actual next tokens that occurred
-        # Hint: Use probs[current_tokens, next_tokens] for fancy indexing
-        token_probs = None
+        return torch.mean(-torch.log(token_probs))
+
         
-        # TODO: Calculate negative log likelihood
-        # Hint: Use torch.log() and handle zeros with clamp or add small epsilon
-        # Return the mean
-        
-        pass
 
 
 if __name__ == "__main__":
+    
+    
     # Load and encode data
+    print("Loading data")
     with open('Dataset/Anne_of_Green_Gables.txt', 'r', encoding='utf-8') as f:
         text = f.read()
     
     #Tokenize data
-    chars =
-    #vocab_size =
-    #stoi = 
-    #itos =
-    #data = 
+    chars = sorted(list(set(text)))
+    vocab_size = len(chars)
+    stoi = {char: n for n, char in enumerate(chars)}
+    itos = {n: char for n, char in enumerate(chars)}
+    data = torch.tensor([stoi[char] for char in text if char in stoi])
     
     # Split data
-    #n = 
-    #train_data = 
-    #val_data = 
-    #
-    #print(f"Vocab size: {vocab_size}")
-    #print(f"Training on {len(train_data)} tokens")
+    n = int(data.size(dim=0) * 0.7)
+    print(n)
+    train_data = data[:n]
+    val_data = data[n:]
     
-    # TODO: Create model
-    #model = CountBasedBigram(vocab_size)
+    print(f"Vocab size: {vocab_size}")
+    print(f"Training on {len(train_data)} tokens")
     
-    # TODO: Train (just count!)
-    #print("\nCounting bigrams...")
-    #model.train(train_data)
-    #print("Done!")
+    model = CountBasedBigram(vocab_size)
     
-    # TODO: Calculate losses
-    #train_loss = model.calculate_loss(train_data[:10000])
-    #val_loss = model.calculate_loss(val_data[:10000])
-    #
-    #print(f"\nTrain loss: {train_loss:.4f}")
-    #print(f"Val loss: {val_loss:.4f}")
+    print("\nCounting bigrams...")
+    model.train(train_data)
+    print("Done!")
     
+    
+    train_loss = model.calculate_loss(train_data[:10000])
+    val_loss = model.calculate_loss(val_data[:10000])
+    
+    print(f"\nTrain loss: {train_loss:.4f}")
+    print(f"Val loss: {val_loss:.4f}")
+    
+
     # Generate
-    #print("\nGenerated text:")
-    #context = torch.zeros((1, 1), dtype=torch.long)
-    #generated = model.generate(context, 500)
-    #print(decode(generated[0].tolist()))
+    print("\nGenerated text:")
+    context = torch.zeros((1, 1), dtype=torch.long)
+    generated = model.generate(context, 500)
+    print(''.join([itos[i] for i in generated[0].tolist()]))
+
