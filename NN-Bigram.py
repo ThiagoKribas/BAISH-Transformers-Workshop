@@ -9,9 +9,8 @@ class NeuralBigram(nn.Module):
     """
     def __init__(self, vocab_size):
         super().__init__()
-        # TODO: Create embedding table (vocab_size, vocab_size)
-        # This learns the same thing as the count table, but via optimization
-        pass
+        self.vocab_size = vocab_size
+        self.counts = torch.rand([vocab_size, vocab_size])
     
     def forward(self, idx):
         """
@@ -108,12 +107,11 @@ if __name__ == "__main__":
     
     print(f"Vocab size: {vocab_size}")
     print(f"Training on {len(train_data)} tokens")
-    
-    # TODO: Create model
-    model = None
+
+    model = NeuralBigram(vocab_size)
     
     # TODO: Create optimizer
-    optimizer = None
+    optimizer = torch.optim.SGD(model.parameters)
     
     # Training loop
     for iter in range(max_iters):

@@ -112,3 +112,8 @@ if __name__ == "__main__":
     generated = model.generate(context, 500)
     print(''.join([itos[i] for i in generated[0].tolist()]))
 
+    print("\nGenerated text from T:")
+    context = torch.zeros((1, 1), dtype=torch.long)
+    context[0] = stoi['T']
+    generated = model.generate(context, 500)
+    print(''.join([itos[i] for i in generated[0].tolist()]))
