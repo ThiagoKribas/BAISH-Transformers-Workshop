@@ -9,9 +9,8 @@ class NeuralBigram(nn.Module):
     """
     def __init__(self, vocab_size):
         super().__init__()
-        # TODO: Create embedding table (vocab_size, vocab_size)
-        # This learns the same thing as the count table, but via optimization
-        pass
+        self.vocab_size = vocab_size
+        self.embedding = nn.Embedding(vocab_size, vocab_size)
     
     def forward(self, idx):
         """
@@ -20,28 +19,23 @@ class NeuralBigram(nn.Module):
         Returns:
             logits: (batch, vocab_size) predictions for next token
         """
-        # TODO: Handle both (batch,) and (batch, 1) shapes
+        if idx.dim() == 2: 
+            idx = idx.squeeze(-1)
 
-        # TODO: Pass idx through embedding table to get logits
-        pass
+        return self.embedding(idx)
     
     def generate(self, idx, max_new_tokens):
         """Generate text by sampling from the learned distribution."""
         for _ in range(max_new_tokens):
-            # TODO: Get last token
-            current = None  # idx[:, -1:]
+            current = idx[:, -1:]
             
-            # TODO: Get predictions
-            logits = None
+            logits = self.forward(current)
             
-            # TODO: Apply softmax to get probabilities
-            probs = None
+            probs = F.softmax(logits, dim=-1)
             
-            # TODO: Sample next token
-            idx_next = None
+            idx_next = torch.multinomial(probs, num_samples=1)
             
-            # TODO: Append to sequence
-            idx = None
+            idx = torch.cat((idx, idx_next), dim=1)
         
         return idx
 
@@ -51,14 +45,12 @@ def get_batch(data, batch_size):
     Sample random batches from data.
     Returns context (bigram uses 1 token) and targets.
     """
-    # TODO: Sample random indices (not too close to end)
-    ix = None  
     
-    # TODO: Get current tokens as context
-    x = None 
+    ix = torch.randint(len(data) - 1, (batch_size,)) 
     
-    # TODO: Get next tokens as targets
-    y = None
+    x = data[ix]
+
+    y = data[ix + 1]
     
     return x, y
 
@@ -70,11 +62,10 @@ def estimate_loss(model, data, batch_size, eval_iters=100):
     
     for k in range(eval_iters):
         X, Y = get_batch(data, batch_size)
-        # TODO: Get model predictions
-        logits = None
         
-        # TODO: Calculate cross-entropy loss
-        loss = None
+        logits = model.forward(X)
+        
+        loss = F.cross_entropy(logits, Y)
         
         losses[k] = loss.item()
     
@@ -87,7 +78,7 @@ if __name__ == "__main__":
     batch_size = 32
     max_iters = 5000
     eval_interval = 500
-    learning_rate = 1.0
+    learning_rate = 4.0
     
     # Load and encode data
     with open('Dataset/Anne_of_Green_Gables.txt', 'r', encoding='utf-8') as f:
@@ -101,32 +92,31 @@ if __name__ == "__main__":
     decode = lambda l: ''.join([itos[i] for i in l])
     
     data = torch.tensor(encode(text), dtype=torch.long)
-    n = int(0.9 * len(data))
+    n = int(0.8 * len(data))
     train_data = data[:n]
     val_data = data[n:]
     
     print(f"Vocab size: {vocab_size}")
     print(f"Training on {len(train_data)} tokens")
     
-    # TODO: Create model
-    model = None
+    model = NeuralBigram(vocab_size)
     
-    # TODO: Create optimizer
-    optimizer = None
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
     
     # Training loop
     for iter in range(max_iters):
-        # TODO: Get batch
-        xb, yb = None, None
+
+        xb, yb = get_batch(train_data, batch_size)
         
-        # TODO: Forward pass
-        logits = None  
+        logits = model.forward(xb)
         
         # TODO: Calculate loss
-        loss = None
+        loss = F.cross_entropy(logits, yb)
         
-        # TODO: Backward pass
-        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
         if iter % eval_interval == 0 or iter == max_iters - 1:
             train_loss = estimate_loss(model, train_data, batch_size)
             val_loss = estimate_loss(model, val_data, batch_size)
