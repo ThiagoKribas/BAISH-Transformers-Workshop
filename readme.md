@@ -20,7 +20,7 @@ Starting from the simplest possible model, you'll implement increasingly sophist
 ## Setup
 
 ```bash
-# Clone this repository
+# Fork this repository then clone
 git clone <repo-url>
 cd transformer-workshop
 
