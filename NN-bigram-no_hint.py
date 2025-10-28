@@ -110,7 +110,6 @@ if __name__ == "__main__":
         
         logits = model.forward(xb)
         
-        # TODO: Calculate loss
         loss = F.cross_entropy(logits, yb)
         
         optimizer.zero_grad()
